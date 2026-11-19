@@ -1,6 +1,7 @@
-
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import './services/socio_service.dart';
+import './services/rol_service.dart';
 import '../widgets/socio_card.dart';
 import '../widgets/socios_filtros.dart';
 import '../widgets/user_menu.dart';
@@ -8,28 +9,39 @@ import 'editar_socio_screen.dart';
 import 'socio_qr_screen.dart';
 import 'asignar_membresia_screen.dart';
 import 'escanear_qr_screen.dart';
- 
+
 class SociosScreen extends StatefulWidget {
   const SociosScreen({super.key});
- 
+
   @override
   State<SociosScreen> createState() => _SociosScreenState();
 }
- 
+
 class _SociosScreenState extends State<SociosScreen> {
   final _service = SocioService();
- 
+
   List<Map<String, dynamic>> _socios = [];
   String _filtro = 'Todos';
   String _busqueda = '';
   bool _cargando = true;
- 
+  bool _esAdmin = RolService.esAdmin;
+
   @override
   void initState() {
     super.initState();
+    _cargarRol();
     _cargarSocios();
   }
- 
+
+  // Refresca la sesión para que el token traiga el rol actualizado
+  Future<void> _cargarRol() async {
+    try {
+      await Supabase.instance.client.auth.refreshSession();
+    } catch (_) {}
+    debugPrint('ROL: ${RolService.rol}');
+    if (mounted) setState(() => _esAdmin = RolService.esAdmin);
+  }
+
   Future<void> _cargarSocios() async {
     setState(() => _cargando = true);
     try {
@@ -41,41 +53,43 @@ class _SociosScreenState extends State<SociosScreen> {
       if (mounted) setState(() => _cargando = false);
     }
   }
- 
+
   void _mostrarMensaje(String texto, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(texto), backgroundColor: color),
     );
   }
- 
+
   // ---------- Acciones ----------
- 
+
   Future<void> _nuevoSocio() async {
     await Navigator.pushNamed(context, '/registro_socio');
     _cargarSocios();
   }
- 
+
   void _nuevoRecepcionista() {
     Navigator.pushNamed(context, '/register_screen');
   }
- 
+
   void _abrirQr(Map<String, dynamic> socio) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => SocioQrScreen(socio: socio)),
     );
   }
- 
+
   Future<void> _editar(Map<String, dynamic> socio) async {
+    if (!_esAdmin) return;
     final huboCambios = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => EditarSocioScreen(socio: socio)),
     );
     if (huboCambios == true) _cargarSocios();
   }
- 
+
   Future<void> _eliminar(Map<String, dynamic> socio) async {
+    if (!_esAdmin) return;
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -97,9 +111,9 @@ class _SociosScreenState extends State<SociosScreen> {
         ],
       ),
     );
- 
+
     if (confirmado != true) return;
- 
+
     try {
       await _service.eliminar(socio['id'] as int);
       _mostrarMensaje('Socio eliminado', const Color(0xFF3B82F6));
@@ -108,17 +122,17 @@ class _SociosScreenState extends State<SociosScreen> {
       _mostrarMensaje('Error al eliminar: $e', Colors.red);
     }
   }
+
   Future<void> _asignar(Map<String, dynamic> socio) async {
     final huboCambios = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => AsignarMembresiaScreen(socio: socio)),
     );
     if (huboCambios == true) _cargarSocios();
- 
-}
- 
+  }
+
   // ---------- UI ----------
- 
+
   List<Map<String, dynamic>> get _sociosFiltrados {
     return _socios.where((s) {
       final nombreCompleto = '${s['nombre']} ${s['apellidos']}'.toLowerCase();
@@ -129,21 +143,24 @@ class _SociosScreenState extends State<SociosScreen> {
       return coincideBusqueda && coincideFiltro;
     }).toList();
   }
- 
+
   Widget _botonesFlotantes() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        FloatingActionButton.extended(
-          heroTag: 'nuevo_recepcionista',
-          onPressed: _nuevoRecepcionista,
-          backgroundColor: const Color(0xFF3B82F6),
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.person_add),
-          label: const Text('Nuevo Recepcionista'),
-        ),
-        const SizedBox(height: 12),
+        // Solo el administrador puede crear recepcionistas
+        if (_esAdmin) ...[
+          FloatingActionButton.extended(
+            heroTag: 'nuevo_recepcionista',
+            onPressed: _nuevoRecepcionista,
+            backgroundColor: const Color(0xFF3B82F6),
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.person_add),
+            label: const Text('Nuevo Recepcionista'),
+          ),
+          const SizedBox(height: 12),
+        ],
         FloatingActionButton.extended(
           heroTag: 'nuevo_socio',
           onPressed: _nuevoSocio,
@@ -155,7 +172,7 @@ class _SociosScreenState extends State<SociosScreen> {
       ],
     );
   }
- 
+
   Widget _lista(List<Map<String, dynamic>> lista) {
     if (_cargando) return const Center(child: CircularProgressIndicator());
     if (lista.isEmpty) {
@@ -170,6 +187,7 @@ class _SociosScreenState extends State<SociosScreen> {
           final s = lista[i];
           return SocioCard(
             socio: s,
+            esAdmin: _esAdmin,
             onQr: () => _abrirQr(s),
             onEditar: () => _editar(s),
             onEliminar: () => _eliminar(s),
@@ -179,7 +197,7 @@ class _SociosScreenState extends State<SociosScreen> {
       ),
     );
   }
- 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -192,13 +210,13 @@ class _SociosScreenState extends State<SociosScreen> {
             onPressed: () => Navigator.pushNamed(context, '/membresias'),
           ),
           IconButton(
-  icon: const Icon(Icons.qr_code_scanner),
-  tooltip: 'Escanear credencial',
-  onPressed: () => Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const EscanearQrScreen()),
-  ),
-),
+            icon: const Icon(Icons.qr_code_scanner),
+            tooltip: 'Escanear credencial',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EscanearQrScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () => UserMenu.show(context),

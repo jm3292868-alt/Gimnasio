@@ -1,29 +1,40 @@
-
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import './services/membresia_service.dart';
+import './services/rol_service.dart';
 import '../widgets/membresia_card.dart';
 import 'editar_membresia_screen.dart';
- 
+
 class MembresiasScreen extends StatefulWidget {
   const MembresiasScreen({super.key});
- 
+
   @override
   State<MembresiasScreen> createState() => _MembresiasScreenState();
 }
- 
+
 class _MembresiasScreenState extends State<MembresiasScreen> {
   final _service = MembresiaService();
- 
+
   List<Map<String, dynamic>> _membresias = [];
   String _busqueda = '';
   bool _cargando = true;
- 
+  bool _esAdmin = RolService.esAdmin;
+
   @override
   void initState() {
     super.initState();
+    _cargarRol();
     _cargarMembresias();
   }
- 
+
+  // Refresca la sesión para que el token traiga el rol actualizado
+  Future<void> _cargarRol() async {
+    try {
+      await Supabase.instance.client.auth.refreshSession();
+    } catch (_) {}
+    if (mounted) setState(() => _esAdmin = RolService.esAdmin);
+  }
+
   Future<void> _cargarMembresias() async {
     setState(() => _cargando = true);
     try {
@@ -35,22 +46,23 @@ class _MembresiasScreenState extends State<MembresiasScreen> {
       if (mounted) setState(() => _cargando = false);
     }
   }
- 
+
   void _mostrarMensaje(String texto, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(texto), backgroundColor: color),
     );
   }
- 
+
   // ---------- Acciones ----------
- 
+
   Future<void> _nuevaMembresia() async {
     await Navigator.pushNamed(context, '/registro_membresia');
     _cargarMembresias();
   }
- 
+
   Future<void> _editar(Map<String, dynamic> membresia) async {
+    if (!_esAdmin) return;
     final huboCambios = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -59,8 +71,9 @@ class _MembresiasScreenState extends State<MembresiasScreen> {
     );
     if (huboCambios == true) _cargarMembresias();
   }
- 
+
   Future<void> _eliminar(Map<String, dynamic> membresia) async {
+    if (!_esAdmin) return;
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -81,9 +94,9 @@ class _MembresiasScreenState extends State<MembresiasScreen> {
         ],
       ),
     );
- 
+
     if (confirmado != true) return;
- 
+
     try {
       await _service.eliminar(membresia['id'] as int);
       _mostrarMensaje('Membresía eliminada', const Color(0xFF3B82F6));
@@ -92,9 +105,9 @@ class _MembresiasScreenState extends State<MembresiasScreen> {
       _mostrarMensaje('Error al eliminar: $e', Colors.red);
     }
   }
- 
+
   // ---------- UI ----------
- 
+
   List<Map<String, dynamic>> get _membresiasFiltradas {
     return _membresias.where((m) {
       return m['nombre']
@@ -103,7 +116,7 @@ class _MembresiasScreenState extends State<MembresiasScreen> {
           .contains(_busqueda.toLowerCase());
     }).toList();
   }
- 
+
   Widget _lista(List<Map<String, dynamic>> lista) {
     if (_cargando) return const Center(child: CircularProgressIndicator());
     if (lista.isEmpty) {
@@ -118,6 +131,7 @@ class _MembresiasScreenState extends State<MembresiasScreen> {
           final m = lista[i];
           return MembresiaCard(
             membresia: m,
+            esAdmin: _esAdmin,
             onEditar: () => _editar(m),
             onEliminar: () => _eliminar(m),
           );
@@ -125,7 +139,7 @@ class _MembresiasScreenState extends State<MembresiasScreen> {
       ),
     );
   }
- 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
