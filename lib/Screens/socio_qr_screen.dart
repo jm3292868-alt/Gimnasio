@@ -144,12 +144,12 @@ class _SocioQrScreenState extends State<SocioQrScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text('Plan: ${_socio['membresia_nombre'] ?? 'Ninguno'}'),
-                        Text('Tel: ${_socio['telefono'] ?? '-'}'),
+                        
                         const SizedBox(height: 24),
                         QrImageView(
                           data: _datosQr(),
                           version: QrVersions.auto,
-                          size: 240,
+                          size: 200,
                           backgroundColor: Colors.white,
                         ),
                       ],

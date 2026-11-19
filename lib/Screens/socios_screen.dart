@@ -6,6 +6,8 @@ import '../widgets/socios_filtros.dart';
 import '../widgets/user_menu.dart';
 import 'editar_socio_screen.dart';
 import 'socio_qr_screen.dart';
+import 'asignar_membresia_screen.dart';
+import 'escanear_qr_screen.dart';
  
 class SociosScreen extends StatefulWidget {
   const SociosScreen({super.key});
@@ -106,6 +108,14 @@ class _SociosScreenState extends State<SociosScreen> {
       _mostrarMensaje('Error al eliminar: $e', Colors.red);
     }
   }
+  Future<void> _asignar(Map<String, dynamic> socio) async {
+    final huboCambios = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => AsignarMembresiaScreen(socio: socio)),
+    );
+    if (huboCambios == true) _cargarSocios();
+ 
+}
  
   // ---------- UI ----------
  
@@ -163,6 +173,7 @@ class _SociosScreenState extends State<SociosScreen> {
             onQr: () => _abrirQr(s),
             onEditar: () => _editar(s),
             onEliminar: () => _eliminar(s),
+            onAsignarMembresia: () => _asignar(s),
           );
         },
       ),
@@ -180,6 +191,14 @@ class _SociosScreenState extends State<SociosScreen> {
             icon: const Icon(Icons.card_membership),
             onPressed: () => Navigator.pushNamed(context, '/membresias'),
           ),
+          IconButton(
+  icon: const Icon(Icons.qr_code_scanner),
+  tooltip: 'Escanear credencial',
+  onPressed: () => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const EscanearQrScreen()),
+  ),
+),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () => UserMenu.show(context),

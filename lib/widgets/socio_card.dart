@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Tarjeta de un socio con acciones: QR, editar y eliminar.
+/// Tarjeta de un socio con acciones: asignar membresía, QR, editar y eliminar.
+/// Editar y eliminar solo se muestran si [esAdmin] es true.
 class SocioCard extends StatelessWidget {
   final Map<String, dynamic> socio;
   final VoidCallback onQr;
   final VoidCallback onEditar;
   final VoidCallback onEliminar;
+  final VoidCallback onAsignarMembresia;
+  final bool esAdmin;
 
   const SocioCard({
     super.key,
@@ -13,6 +16,8 @@ class SocioCard extends StatelessWidget {
     required this.onQr,
     required this.onEditar,
     required this.onEliminar,
+    required this.onAsignarMembresia,
+    this.esAdmin = false,
   });
 
   Color _colorEstado(String estado) {
@@ -55,20 +60,27 @@ class SocioCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 IconButton(
+                  icon: const Icon(Icons.add_card, color: Colors.green),
+                  tooltip: 'Asignar membresía',
+                  onPressed: onAsignarMembresia,
+                ),
+                IconButton(
                   icon: const Icon(Icons.qr_code, color: Color(0xFF3B82F6)),
                   tooltip: 'Ver credencial QR',
                   onPressed: onQr,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.orange),
-                  tooltip: 'Editar',
-                  onPressed: onEditar,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  tooltip: 'Eliminar',
-                  onPressed: onEliminar,
-                ),
+                if (esAdmin)
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.orange),
+                    tooltip: 'Editar',
+                    onPressed: onEditar,
+                  ),
+                if (esAdmin)
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    tooltip: 'Eliminar',
+                    onPressed: onEliminar,
+                  ),
               ],
             ),
           ),

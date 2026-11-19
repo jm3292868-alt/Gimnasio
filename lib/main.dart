@@ -40,6 +40,7 @@ class MyApp extends StatelessWidget {
         '/membresias': (context) => const MembresiasScreen(),
         '/registro_membresia': (context) => const RegistroMembresiaScreen(),
        '/register_screen': (context) => const RegisterScreen()
+      
         
       },
     );

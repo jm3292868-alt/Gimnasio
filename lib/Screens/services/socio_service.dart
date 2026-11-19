@@ -16,6 +16,16 @@ class SocioService {
     return List<Map<String, dynamic>>.from(datos);
   }
 
+  /// Busca un socio por id en la vista (con su estado actual).
+  /// Regresa null si no existe.
+  Future<Map<String, dynamic>?> obtenerSocioPorId(int id) async {
+    return await _client
+        .from(_vistaSocios)
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+  }
+
   /// Sube la foto al bucket y regresa la URL pública.
   Future<String> subirFoto(File imagen, String nombre) async {
     final nombreArchivo =
